@@ -11,6 +11,7 @@
         "fs": "^0.0.1-security",
         "install": "^0.13.0",
         "node-fetch": "^3.2.10",
-        "user-agents": "^1.0.1133"
+        "user-agents": "^1.0.1133",
+        "winston": "^3.17.0"
     }
 }
