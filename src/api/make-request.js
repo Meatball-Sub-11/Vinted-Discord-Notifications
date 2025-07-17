@@ -1,6 +1,15 @@
 import fetch from 'node-fetch';
-
 import { authManager } from './auth-manager.js';
+import logger from '../utils/logger.js';
+
+// A custom error class to include more context
+class VintedAPIError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.name = 'VintedAPIError';
+        this.status = status;
+    }
+}
 
 //general fucntion to make an authorized request
 export const authorizedRequest = async ({
@@ -35,7 +44,7 @@ export const authorizedRequest = async ({
             headers["Upgrade-Insecure-Requests"] = "1";
         }
         if (logs) {
-            console.log("making an authed request to " + url);
+            logger.info(`Making an authed request to ${url}`);
         }
 
         const options = {
@@ -50,19 +59,23 @@ export const authorizedRequest = async ({
 
         while ([301, 302, 303, 307, 308].includes(response.status)) {
             const newUrl = response.headers.get('Location');
-            console.log(`redirected to ${newUrl}`);
+            logger.info(`Redirected to ${newUrl}`);
             response = await fetch(newUrl, options);
         }
+
+        // Throw a detailed error for bad responses
         if (!response.ok) {
-            throw `HTTP status: ${response.status}`;
+            throw new VintedAPIError(`HTTP status: ${response.status}`, response.status);
         }
+
         if (response.headers.get('Content-Type')?.includes('text/html')) {
-            console.warn("Response is HTML")
+            logger.warn("Response is HTML, not JSON. This might indicate an issue like a CAPTCHA.");
             return response.headers;
         }
 
         return await response.json();
     } catch (error) {
-        throw "While making request: " + error;
+        // Re-throw the original error to preserve details like the status code
+        throw error;
     }
 };

@@ -1,5 +1,6 @@
 import { authorizedRequest } from './make-request.js';
 import { authManager } from './auth-manager.js';
+import logger from '../utils/logger.js';
 
 //helper to extract cookie value from the header string
 const extractCookieValue = (header, name) => {
@@ -12,18 +13,18 @@ const extractCookieValue = (header, name) => {
 export const fetchCookies = async () => {
     try{
         const headers = await authorizedRequest({
-            method: "HEAD", 
-            url: process.env.BASE_URL+"/how_it_works"
+            method: "HEAD",
+            url: `${process.env.BASE_URL}/how_it_works`
         });
-    
+
         const setCookie = headers.raw()['set-cookie'];
         const sessionCookiesArray = Array.isArray(setCookie) ? setCookie : (setCookie ? [setCookie] : []);
         if (!sessionCookiesArray || sessionCookiesArray.length === 0) {
-            throw "Set-Cookie headers not found in the response";
+            throw new Error("Set-Cookie headers not found in the response");
         }
         const cookieHasAccessToken = sessionCookiesArray.some(cookie => cookie.includes('access_token_web'));
         if (cookieHasAccessToken) {
-            console.log('refreshing cookies');
+            logger.info('Refreshing Vinted session cookies.');
             //get all set-cookies and extract their values to construct the cookie string
             const cookieHeader = sessionCookiesArray
                 .map(cookie => cookie.split(';')[0].trim())
@@ -36,6 +37,8 @@ export const fetchCookies = async () => {
             await authManager.setCookies(cookieObject);
         }
     } catch (error) {
-        throw "While fetching cookies: " + error;
+        // Re-throw the original error to preserve the stack trace and specific details.
+        // This is crucial for the calling function to log the full error.
+        throw error;
     }
 };

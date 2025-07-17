@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +17,7 @@ class authenticationManager {
         try {
             await fs.promises.writeFile(this.cookiesPath, JSON.stringify(this.cookies, null, 2));
         } catch (error) {
-            console.error("\nError saving cookies:", error);
+            logger.error({ message: "Error saving cookies to file", error });
         }
     }
 

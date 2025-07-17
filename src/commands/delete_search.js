@@ -2,6 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder } from '@discordjs/builders';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -9,10 +11,10 @@ const filePath = path.resolve(__dirname, '../../config/channels.json');
 
 export const data = new SlashCommandBuilder()
     .setName('delete_search')
-    .setDescription('Start receiving notifications for this Vinted channel.')
+    .setDescription('Stop receiving notifications for this Vinted channel.')
     .addStringOption(option =>
         option.setName('name')
-            .setDescription('The name of your new search.')
+            .setDescription('The name of the search to delete.')
             .setRequired(true));
 
 export const execute = async (interaction) => {
@@ -33,15 +35,17 @@ export const execute = async (interaction) => {
 
         await fs.promises.writeFile(filePath, JSON.stringify(searches, null, 2));
 
+        logger.info(`Search "${name}" was deleted by ${interaction.user.tag}.`);
+
         const embed = new EmbedBuilder()
-            .setTitle("Search " + name + " deleted! It will stop being monitored on the next restart.")
-            .setDescription(name)
+            .setTitle("Search " + name + " deleted!")
+            .setDescription("It will stop being monitored on the next restart.")
             .setColor(0x00FF00);
 
         await interaction.followUp({ embeds: [embed] });
 
     } catch (error) {
-        console.error('\nError deleting the search:', error);
+        logger.error({ message: `Error deleting search "${name}"`, error });
         await interaction.followUp({ content: 'There was an error deleting the search.'});
     }
 }
