@@ -5,6 +5,8 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import { run } from "./src/run.js";
 import { registerCommands, handleCommands } from "./src/commands.js";
 
+import logger from './src/utils/logger.js';
+
 const mySearches = JSON.parse(fs.readFileSync('./config/channels.json', 'utf8'));
 dotenv.config();
 
@@ -15,7 +17,7 @@ client.login(process.env.BOT_TOKEN);
 
 //launch the bot
 client.on("ready", async () => {
-    console.log(`Logged in as ${client.user.tag}!`);
+    logger.info(`Logged in as ${client.user.tag}!`);
     registerCommands(client);
     run(client, mySearches);
 });
@@ -25,6 +27,6 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isCommand()) {
         handleCommands(interaction, mySearches);
     } else {
-        console.log('Unknown interaction type');
+        logger.info('Unknown interaction type');
     }
 });

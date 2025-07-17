@@ -2,48 +2,50 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { REST, Routes } from 'discord.js';
+import logger from './utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const commands = [];
-const commandFilesPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandFilesPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(path.join(__dirname, 'commands')).filter(file => file.endsWith('.js'));
 
 //load command modules
 const loadCommands = async () => {
     for (const file of commandFiles) {
         const module = await import(`./commands/${file}`);
-        if (module.data) {
-            commands.push(module.data.toJSON());
-        }
+        commands.push(module.data.toJSON());
     }
 }
 
 //register commands with Discord to (refreshes them if necessary)
 export const registerCommands = async (client) => {
     await loadCommands();
+
     const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
     try {
-        console.log('Started refreshing application (/) commands.');
+        logger.info('Started refreshing application (/) commands.');
         await rest.put(
             Routes.applicationCommands(client.user.id),
             { body: commands }
         );
-        console.log('Successfully reloaded application (/) commands.');
+        logger.info('Successfully reloaded application (/) commands.');
     } catch (error) {
-        console.error('\nError reloading commands:', error);
+        logger.error({ message: 'Error reloading application commands', error });
     }
 }
 
 //handle command interactions
 export const handleCommands = async (interaction, mySearches) => {
-    console.log(`Received command: ${interaction.commandName}`);
+    logger.info(`Received command: /${interaction.commandName} from user ${interaction.user.tag}`);
 
     try {
         const module = await import(`./commands/${interaction.commandName}.js`);
         await module.execute(interaction, mySearches);
     } catch (error) {
-        console.error('\nError handling command:', error);
+        logger.error({ 
+            message: `Error handling command /${interaction.commandName}`,
+            error: error
+        });
 
         const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
         try {
@@ -53,7 +55,7 @@ export const handleCommands = async (interaction, mySearches) => {
                 await interaction.reply(errorMessage);
             }
         } catch (e) {
-            console.error('Error while sending error message to Discord:', e);
+            logger.error({ message: 'Error while sending error message to Discord', error: e});
         }
     }
 }

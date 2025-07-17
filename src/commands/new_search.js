@@ -2,6 +2,8 @@ import { SlashCommandBuilder, EmbedBuilder } from '@discordjs/builders';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -54,7 +56,7 @@ export const execute = async (interaction) => {
 
     const url = interaction.options.getString('url');
     const banned_keywords = interaction.options.getString('banned_keywords') ? interaction.options.getString('banned_keywords').split(',').map(keyword => keyword.trim()) : [];
-    let frequency = interaction.options.getString('frequency') || '10'; // Get as string for parsing
+    let frequency = interaction.options.getString('frequency') || '10';
     const name = interaction.options.getString('name');
     const channel_id = interaction.channel.id;
 
@@ -65,13 +67,12 @@ export const execute = async (interaction) => {
         return;
     }
 
-    // New: Validate the frequency
+    // Validate the frequency
     const frequencyNum = parseInt(frequency, 10);
     if (isNaN(frequencyNum) || frequencyNum < 5) {
         await interaction.followUp({ content: 'The frequency must be a number and at least 5 seconds.'});
         return;
     }
-
 
     try {
         //register the search into the json file
@@ -86,16 +87,18 @@ export const execute = async (interaction) => {
             "channelId": channel_id,
             "channelName": name,
             "url": url,
-            "frequency": frequencyNum, // Use the validated number
+            "frequency": frequencyNum,
             "titleBlacklist": banned_keywords
         };
         searches.push(search);
 
         try{
             fs.writeFileSync(filePath, JSON.stringify(searches, null, 2));
+            logger.info(`New search "${name}" created by ${interaction.user.tag} in channel ${interaction.channel.id}.`);
         } catch (error) {
-            console.error('\nError saving new search:', error);
-            await interaction.followUp({ content: 'There was an error starting the monitoring.'});
+            logger.error({ message: `Error saving new search "${name}" to file`, error });
+            await interaction.followUp({ content: 'There was an error saving the new search.'});
+            return; // Important to exit after handling the error
         }
 
         const embed = new EmbedBuilder()
@@ -106,7 +109,7 @@ export const execute = async (interaction) => {
         await interaction.followUp({ embeds: [embed]});
 
     } catch (error) {
-        console.error('Error starting monitoring:', error);
+        logger.error({ message: `Error processing /new_search command for "${name}"`, error });
         await interaction.followUp({ content: 'There was an error starting the monitoring.'});
     }
 }
